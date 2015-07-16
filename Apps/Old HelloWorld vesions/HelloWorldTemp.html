@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version (or Chrome Frame if pre-IE11). -->
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        @import url(/Apps/Sandcastle/templates/bucket.css);
+        html, body, #cesiumContainer {
+            width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+        }
+    </style>
+
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div id="loadingOverlay"><h1>Loading...</h1></div>
+    <div id="toolbar"></div>
+</head>
+<body>
+    <script type="text/javascript" src="/Apps/Sandcastle/Sandcastle-header.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+    <script>
+
+//[].find polyfill!!
+if (!Array.prototype.find) {
+    Array.prototype.find = function(predicate) {
+        if (this == null) {
+            throw new TypeError('Array.prototype.find called on null or undefined');
+        }
+        if (typeof predicate !== 'function') {
+            throw new TypeError('predicate must be a function');
+        }
+        var list = Object(this);
+        var length = list.length >>> 0;
+        var thisArg = arguments[1];
+        var value;
+
+        for (var i = 0; i < length; i++) {
+            value = list[i];
+            if (predicate.call(thisArg, value, i, list)) {
+                return value;
+            }
+        }
+        return undefined;
+    };
+}
+
+var viewer = new Cesium.Viewer('cesiumContainer', 
+{
+    fullscreenElement : document.body,
+    sceneMode : Cesium.SceneMode.COLUMBUS_VIEW,
+    infoBox : false
+});
+
+var countriesCocde
+var data
+
+function countToHue(count) {
+    var min = 0;
+    var max = 800;
+
+    count = Math.max(Math.min(count, max), min);
+
+    var hue =((count / max));
+    return hue;
+}
+
+function getStuffFromServer(temp, callback) {
+    $.getJSON("http://52.11.153.209:8080/stats/clicks?after=1436871060323", function(data) {
+
+     getCountriesCounts(data, callback)
+    })
+}
+
+
+function getCountriesCounts(data, callback) {
+    var uk = 0 //GBR
+    var usa = 1 //USA
+    var india = 2 //IND
+    var JP=3
+    var FR=4
+    var CA=5
+    var AU=6
+    var DE=7
+    var RU=8
+
+    var counts = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    for (d in data.data) {
+        if (data.data[d].countryCode === 'GB')
+            counts[uk] = counts[uk]+1
+        if (data.data[d].countryCode === 'US')
+            counts[usa] = counts[usa]+1
+        if (data.data[d].countryCode === 'IN')
+            counts[india]= counts[india]+1
+
+        if (data.data[d].countryCode === 'JP')
+            counts[JP] = counts[JP]+1
+        if (data.data[d].countryCode === 'FR')
+            counts[FR] = counts[FR]+1
+        if (data.data[d].countryCode === 'CA')
+            counts[CA]= counts[CA]+1
+        if (data.data[d].countryCode === 'AU')
+            counts[AU] = counts[AU]+1
+        if (data.data[d].countryCode === 'DE')
+            counts[DE] = counts[DE]+1
+        if (data.data[d].countryCode === 'RU')
+            counts[RU]= counts[RU]+1
+    }
+
+    var newdata = [{
+        countryCode: 'GBR',
+        count: counts[uk]
+    },
+    {
+        countryCode: 'USA',
+        count: counts[usa]
+    },
+    {
+        countryCode: 'IND',
+        count: counts[india]
+    },
+    {
+        countryCode: 'JP',
+        count: counts[JP]
+    },
+    {
+        countryCode: 'FR',
+        count: counts[FR]
+    },
+    {
+        countryCode: 'CA',
+        count: counts[CA]
+    },
+    {
+        countryCode: 'AU',
+        count: counts[AU]
+    },
+    {
+        countryCode: 'DE',
+        count: counts[DE]
+    },
+    {
+        countryCode: 'RU',
+        count: counts[RU]
+    }]
+    callback(newdata)
+}
+
+
+
+$(document).ready(function(){
+    $.getJSON("/Apps/worldGeo/countries.geo.json", function(data){
+        getStuffFromServer(data, function(stats) {
+            stats.map(function(countryToCount) {
+                return {
+                    type: "FeatureCollection",
+                    features: [data.features.find(function(country) {
+                        return country.id === countryToCount.countryCode;
+                    })],
+                    count: countryToCount.count
+                };
+            }).forEach(function(geoJsonObj) {
+            	console.log(geoJsonObj.count)
+                viewer.dataSources.add(Cesium.GeoJsonDataSource.load(geoJsonObj, {
+                    stroke: Cesium.Color.RED.withAlpha(0),
+                    fill: Cesium.Color.fromAlpha(Cesium.Color.GREEN,countToHue(geoJsonObj.count)),
+                    strokeWidth: 0
+                }));
+
+            });
+
+
+        })
+        //{"type":"FeatureCollection","features":[
+    });
+});
+
+
+var entities = viewer.entities;
+$(document).ready(function(){
+    $.getJSON("http://52.11.153.209:8080/stats/clicks?after=1436871060323", function(dataClicks){
+        dataClicks.data.forEach(function(field){
+
+                  viewer.entities.add({
+                    position : Cesium.Cartesian3.fromDegrees(field.latitude, field.longitude),
+                    point : {
+                        pixelSize : 5
+                    }
+                })
+              });
+    });
+});
+</script>
+</body>
+</html>
