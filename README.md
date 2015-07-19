@@ -1,7 +1,7 @@
 # TaboolaClicks
 Taboola challenge displays clicks per minute
 
-1.Just for now use this libk as Json data
+1.Just for now use this beta Json data that I created for testing, (all the data is meaningless, therefore you may see clicks from the sea)
 http://beta.json-generator.com/api/json/get/VytKrxQK
 
 2.The guideline is attached below:
